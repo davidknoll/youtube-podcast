@@ -1,0 +1,34 @@
+{
+  "name": "youtube-podcast",
+  "version": "0.0.1",
+  "description": "Takes a YouTube channel and serves it up as a podcast",
+  "main": "index.js",
+  "scripts": {
+    "start": "./index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "youtube-podcast": "./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidknoll/youtube-podcast.git"
+  },
+  "keywords": [
+    "youtube",
+    "podcast",
+    "rss"
+  ],
+  "author": "David Knoll",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davidknoll/youtube-podcast/issues"
+  },
+  "homepage": "https://github.com/davidknoll/youtube-podcast#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "podcast": "^2.0.1",
+    "ytdl-core": "^4.11.4",
+    "ytpl": "^2.3.0"
+  }
+}
