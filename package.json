@@ -27,8 +27,10 @@
   "homepage": "https://github.com/davidknoll/youtube-podcast#readme",
   "dependencies": {
     "express": "^4.18.2",
+    "fluent-ffmpeg": "^2.1.2",
     "podcast": "^2.0.1",
-    "ytdl-core": "^4.11.4",
+    "tmp-promise": "^3.0.3",
+    "ytdl-core": "^4.11.5",
     "ytpl": "^2.3.0"
   }
 }
