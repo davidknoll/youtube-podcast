@@ -8,6 +8,7 @@ const { Podcast } = require('podcast');
 const ffmpeg = require('fluent-ffmpeg');
 const fsPromises = require('fs/promises');
 
+const debug = !!parseInt(process.env.DEBUG, 10);
 const port = process.env.PORT || 3000;
 const eplimit = process.env.EPISODE_LIMIT || 20;
 console.log(`youtube-podcast listening on port ${port}`);
@@ -34,6 +35,7 @@ Hello, I am youtube-podcast
 
     ytpl(req.params.id, { limit: eplimit })
       .then(playlist => {
+        if (debug) { console.log(JSON.stringify(playlist, null, 2)); }
         const myurl = new URL(req.originalUrl, `${req.protocol}://${req.hostname}:${port}`);
         feed = new Podcast({
           title: playlist.title,
@@ -51,8 +53,10 @@ Hello, I am youtube-podcast
 
         const itemPromises = playlist.items.map(item => ytdl.getInfo(item.id)
           .then(info => {
+            if (debug) { console.log(JSON.stringify(info, null, 2)); }
             const itemurl = new URL(myurl);
             itemurl.pathname = `/item/${item.id}.mp3`;
+            itemurl.searchParams.set('list', playlist.id);
             return {
               title: info.videoDetails.title,
               description: info.videoDetails.description,
@@ -87,27 +91,66 @@ Hello, I am youtube-podcast
 
   .get('/item/:id.mp3', (req, res) => {
     console.log(new Date().toLocaleTimeString('en-GB') + ' ' + req.originalUrl);
-    let inPath, outPath;
+    let inPath, outPath, info, playlist;
 
     tmp.tmpName({ postfix: '.tmp' })
       .then(tmpPath => new Promise((resolve, reject) => {
         inPath = tmpPath;
+        if (debug) { console.log(inPath); }
         ytdl(req.params.id, { quality: 'highestaudio', filter: 'audioonly' })
+          .on('info', (videoInfo, videoFormat) => {
+            info = videoInfo.videoDetails;
+            if (debug) {
+              console.log(JSON.stringify(videoInfo, null, 2));
+              console.log(JSON.stringify(videoFormat, null, 2));
+            }
+          })
+          .on('progress', (chunkBytes, doneBytes, totalBytes) => {
+            const progress = (doneBytes * 100) / totalBytes;
+            if (progress % 10 < 0.05) {
+              console.log(`${new Date().toLocaleTimeString('en-GB')} ${req.params.id}.mp3 (DL: ${Math.floor(progress)}%)`);
+            }
+          })
           .on('error', reject)
           .on('finish', resolve)
           .pipe(fs.createWriteStream(inPath));
       }))
+
+      .then(() => ytpl(req.query.list, { limit: eplimit }))
+      .then(ytplResult => {
+        playlist = ytplResult;
+        if (debug) { console.log(JSON.stringify(playlist, null, 2)); }
+      })
+
       .then(() => tmp.tmpName({ postfix: '.mp3' }))
       .then(tmpPath => new Promise((resolve, reject) => {
         outPath = tmpPath;
+        if (debug) { console.log(outPath); }
         ffmpeg(inPath)
           .audioCodec('libmp3lame')
           .audioBitrate(320)
+          .audioChannels(2)
+          .audioFrequency(44100)
           .noVideo()
+          .format('mp3')
+          .outputOptions(
+            '-metadata', `title=${info.title}`,
+            '-metadata', `artist=${info.author.name}`,
+            '-metadata', `album_artist=${playlist.author.name}`,
+            '-metadata', `album=${playlist.title}`,
+            '-metadata', `date=${new Date(info.publishDate).getFullYear()}`,
+            '-metadata', `author_url=${info.video_url}`
+          )
+          .on('progress', progress => {
+            if (progress.percent % 10 < 1 && progress.percent > 0) {
+              console.log(`${new Date().toLocaleTimeString('en-GB')} ${req.params.id}.mp3 (DL: 100% XC: ${Math.floor(progress.percent)}%)`);
+            }
+          })
           .on('error', reject)
           .on('end', resolve)
           .save(outPath);
       }))
+
       .then(() => res.sendFile(outPath))
       .then(() => fsPromises.unlink(inPath))
       .then(() => fsPromises.unlink(outPath))
