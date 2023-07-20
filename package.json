@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "Takes a YouTube channel and serves it up as a podcast",
   "main": "index.js",
+  "type": "module",
   "scripts": {
+    "build": "docker build -t youtube-podcast .",
     "start": "./index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -28,7 +30,9 @@
   "dependencies": {
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.2",
+    "move-file": "^3.1.0",
     "podcast": "^2.0.1",
+    "tmp": "^0.2.1",
     "tmp-promise": "^3.0.3",
     "ytdl-core": "^4.11.5",
     "ytpl": "^2.3.0"
